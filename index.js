@@ -28,6 +28,19 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+
+    const Services = client.db("InsightHub").collection("ServicesProfile");
+
+    app.get("/Services", async (req, res) => {
+      // const email = req.query.email;
+      // let query = {};
+      // if (email) {
+      //     query = { hr_email: email }
+      // }
+      const cursor = Services.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
