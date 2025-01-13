@@ -48,6 +48,68 @@ async function run() {
       const result = await Services.findOne(query);
       res.send(result);
     });
+
+    app.post("/services", async (req, res) => {
+      const newService = req.body;
+      const result = await Services.insertOne(newService);
+      res.send(result);
+    });
+
+    app.post("/services/:id/reviews", async (req, res) => {
+      const serviceId = req.params.id;
+      const { userEmail, userName, userProfile, review, rating, addedDate } =
+        req.body;
+
+      try {
+        // Find the service
+        const query = { _id: new ObjectId(serviceId) };
+        const service = await Services.findOne(query);
+
+        if (!service) {
+          return res.status(404).send({ message: "Service not found" });
+        }
+
+        // Update reviews array
+        const newReview = {
+          userEmail,
+          userName,
+          userProfile,
+          review,
+          rating: parseFloat(rating),
+          addedDate,
+        };
+
+        const updatedReviews = [...(service.reviews || []), newReview];
+
+        // Calculate the new average rating
+        const totalReviews = updatedReviews.length;
+        const totalRating = updatedReviews.reduce(
+          (sum, r) => sum + r.rating,
+          0
+        );
+        const averageRating = totalRating / totalReviews;
+
+        // Update the service document
+        const update = {
+          $set: {
+            reviews: updatedReviews,
+            "reviewsInfo.totalReviews": totalReviews,
+            "reviewsInfo.averageRating": averageRating,
+          },
+        };
+
+        const result = await Services.updateOne(query, update);
+
+        res.send({
+          message: "Review added successfully",
+          result,
+          averageRating,
+          totalReviews,
+        });
+      } catch (error) {
+        res.status(500).send({ message: "Error adding review", error });
+      }
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
