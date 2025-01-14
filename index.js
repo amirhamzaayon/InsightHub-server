@@ -32,12 +32,12 @@ async function run() {
     const Services = client.db("InsightHub").collection("ServicesProfile");
 
     app.get("/services", async (req, res) => {
-      // const email = req.query.email;
-      // let query = {};
-      // if (email) {
-      //     query = { hr_email: email }
-      // }
-      const cursor = Services.find();
+      const email = req.query.email;
+      let query = {};
+      if (email) {
+        query = { ownerEmail: email };
+      }
+      const cursor = Services.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -56,58 +56,39 @@ async function run() {
     });
 
     app.post("/services/:id/reviews", async (req, res) => {
-      const serviceId = req.params.id;
-      const { userEmail, userName, userProfile, review, rating, addedDate } =
-        req.body;
-
       try {
-        // Find the service
-        const query = { _id: new ObjectId(serviceId) };
-        const service = await Services.findOne(query);
+        const id = req.params.id; // Extract service ID from the route
+        const reviewData = req.body; // Get review data from request body
+
+        const service = await Services.findOne({ _id: new ObjectId(id) });
 
         if (!service) {
           return res.status(404).send({ message: "Service not found" });
         }
 
-        // Update reviews array
-        const newReview = {
-          userEmail,
-          userName,
-          userProfile,
-          review,
-          rating: parseFloat(rating),
-          addedDate,
-        };
-
-        const updatedReviews = [...(service.reviews || []), newReview];
-
-        // Calculate the new average rating
+        // Update the reviews array and calculate new average rating
+        const updatedReviews = [...(service.reviews || []), reviewData];
         const totalReviews = updatedReviews.length;
-        const totalRating = updatedReviews.reduce(
-          (sum, r) => sum + r.rating,
-          0
+        const averageRating =
+          updatedReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
+
+        // Prepare the updated `reviewsInfo` array
+        const updatedReviewsInfo = [{ averageRating }, { totalReviews }];
+
+        const updateResult = await Services.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              reviews: updatedReviews,
+              reviewsInfo: updatedReviewsInfo, // Use array format
+            },
+          }
         );
-        const averageRating = totalRating / totalReviews;
 
-        // Update the service document
-        const update = {
-          $set: {
-            reviews: updatedReviews,
-            "reviewsInfo.totalReviews": totalReviews,
-            "reviewsInfo.averageRating": averageRating,
-          },
-        };
-
-        const result = await Services.updateOne(query, update);
-
-        res.send({
-          message: "Review added successfully",
-          result,
-          averageRating,
-          totalReviews,
-        });
+        res.send({ message: "Review added successfully", updateResult });
       } catch (error) {
-        res.status(500).send({ message: "Error adding review", error });
+        console.error("Error adding review:", error);
+        res.status(500).send({ message: "Internal Server Error", error });
       }
     });
   } finally {
