@@ -127,6 +127,35 @@ async function run() {
       }
     });
 
+    // get all services review
+    app.get("/allreviews", async (req, res) => {
+      try {
+        const reviews = await Services.aggregate([
+          // Unwind the reviews array, keeping services with empty reviews
+          { $unwind: { path: "$reviews", preserveNullAndEmptyArrays: true } },
+          // Project necessary fields for the response
+          {
+            $project: {
+              companyName: 1,
+              serviceTitle: 1,
+              category: 1,
+              "reviews.userEmail": 1,
+              "reviews.userName": 1,
+              "reviews.userProfile": 1,
+              "reviews.review": 1,
+              "reviews.rating": 1,
+              "reviews.addedDate": 1,
+            },
+          },
+        ]).toArray();
+
+        res.status(200).send(reviews);
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+        res.status(500).send({ message: "Failed to fetch reviews", error });
+      }
+    });
+
     //get my review
     app.get("/reviews", async (req, res) => {
       const userEmail = req.query.userEmail;
@@ -233,6 +262,7 @@ async function run() {
       // }
     });
 
+    // delete my service
     app.delete("/services/:id", async (req, res) => {
       const serviceId = req.params.id;
 
@@ -252,24 +282,24 @@ async function run() {
     });
 
     // filter by service title
-    app.get("/services", async (req, res) => {
-      const { serviceTitle, category } = req.query;
-      const filter = {};
-      if (serviceTitle) {
-        filter.serviceTitle = { $regex: serviceTitle, $options: "i" };
-      }
-      if (category) {
-        filter.category = category;
-      }
-      const services = await Services.find(filter).toArray();
-      res.send(services);
-    });
+    // app.get("/services", async (req, res) => {
+    //   const { serviceTitle, category } = req.query;
+    //   const filter = {};
+    //   if (serviceTitle) {
+    //     filter.serviceTitle = { $regex: serviceTitle, $options: "i" };
+    //   }
+    //   if (category) {
+    //     filter.category = category;
+    //   }
+    //   const services = await Services.find(filter).toArray();
+    //   res.send(services);
+    // });
 
     // filter by category
-    app.get("/services/categories", async (req, res) => {
-      const categories = await Services.distinct("category");
-      res.send(categories);
-    });
+    // app.get("/services/categories", async (req, res) => {
+    //   const categories = await Services.distinct("category");
+    //   res.send(categories);
+    // });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
