@@ -14,7 +14,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
-    strict: true,
+    strict: false,
     deprecationErrors: true,
   },
 });
@@ -282,24 +282,24 @@ async function run() {
     });
 
     // filter by service title
-    // app.get("/services", async (req, res) => {
-    //   const { serviceTitle, category } = req.query;
-    //   const filter = {};
-    //   if (serviceTitle) {
-    //     filter.serviceTitle = { $regex: serviceTitle, $options: "i" };
-    //   }
-    //   if (category) {
-    //     filter.category = category;
-    //   }
-    //   const services = await Services.find(filter).toArray();
-    //   res.send(services);
-    // });
+    app.get("/search", async (req, res) => {
+      const { serviceTitle, category } = req.query;
+      const filter = {};
+      if (serviceTitle) {
+        filter.serviceTitle = { $regex: serviceTitle, $options: "i" };
+      }
+      if (category) {
+        filter.category = category;
+      }
+      const services = await Services.find(filter).toArray();
+      res.send(services);
+    });
 
     // filter by category
-    // app.get("/services/categories", async (req, res) => {
-    //   const categories = await Services.distinct("category");
-    //   res.send(categories);
-    // });
+    app.get("/categories", async (req, res) => {
+      const categories = await Services.distinct("category");
+      res.send(["All", ...categories]);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
